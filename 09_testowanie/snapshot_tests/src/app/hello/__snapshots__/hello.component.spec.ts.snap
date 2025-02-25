@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`HelloComponent powinien pasować do snapshotu 1`] = `"<div id="root0" ng-version="18.2.13"><p>Hello, World!</p></div>"`;

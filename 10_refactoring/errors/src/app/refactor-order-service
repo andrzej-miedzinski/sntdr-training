@@ -1,0 +1,27 @@
+// order.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class OrderService {
+  constructor(private http: HttpClient) {}
+
+  private handleError(operation: string) {
+    return catchError(error => {
+      console.error(`Error during ${operation}:`, error);
+      return throwError(error);
+    });
+  }
+
+  getOrders() {
+    return this.http.get('/api/orders').pipe(this.handleError('fetching orders'));
+  }
+
+  addOrder(order: any) {
+    return this.http.post('/api/orders', order).pipe(this.handleError('adding order'));
+  }
+}

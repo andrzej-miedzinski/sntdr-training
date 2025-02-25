@@ -1,0 +1,22 @@
+// order-validator.ts
+export class OrderValidator {
+  validateOrder(order: any) {
+    if (!order.items || order.items.length === 0) {
+      throw new Error('Order must contain at least one item.');
+    }
+    if (!order.customer || !order.customer.email) {
+      throw new Error('Customer email is required.');
+    }
+  }
+}
+
+// order-processor.ts
+export class OrderProcessor {
+  constructor(private validator: OrderValidator) {}
+
+  processOrder(order: any) {
+    this.validator.validateOrder(order);
+    console.log(`Processing order for ${order.customer.email}`);
+    // Logika przetwarzania zamówienia...
+  }
+}

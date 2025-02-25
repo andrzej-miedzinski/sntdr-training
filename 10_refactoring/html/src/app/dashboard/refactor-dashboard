@@ -1,0 +1,31 @@
+// dashboard.component.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-dashboard',
+  template: `
+    <div>
+      <h2>Users</h2>
+      <ul>
+        <ng-container *ngFor="let item of users">
+          <li>{{ renderItem(item) }}</li>
+        </ng-container>
+      </ul>
+
+      <h2>Products</h2>
+      <ul>
+        <ng-container *ngFor="let item of products">
+          <li>{{ renderItem(item) }}</li>
+        </ng-container>
+      </ul>
+    </div>
+  `
+})
+export class DashboardComponent {
+  users = [{ name: 'John' }, { name: 'Jane' }];
+  products = [{ name: 'Laptop' }, { name: 'Phone' }];
+
+  renderItem(item: any): string {
+    return item.name;
+  }
+}

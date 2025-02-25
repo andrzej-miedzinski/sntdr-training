@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UserListComponent powinien pasować do snapshotu 1`] = `
+"<div id="root0" ng-version="18.2.13"><ul><li>John</li><li>Jane</li><!--bindings={
+  "ng-reflect-ng-for-of": "[object Object],[object Object"
+}--></ul></div>"
+`;
