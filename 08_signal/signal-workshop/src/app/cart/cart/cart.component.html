@@ -1,0 +1,14 @@
+<h1>Koszyk</h1>
+<ul>
+  <li *ngFor="let product of cart">
+    {{ product.name }} - {{ product.price }} zł x {{ product.quantity }}
+    <button (click)="updateQuantity(product.id, product.quantity + 1)">+</button>
+    <button (click)="updateQuantity(product.id, product.quantity - 1)">-</button>
+    <button (click)="removeFromCart(product.id)">Usuń</button>
+  </li>
+</ul>
+<p>Suma: {{ total }} zł</p>
+
+<button (click)="addToCart({ id: 1, name: 'Produkt 1', price: 10, quantity: 1 })">
+  Dodaj produkt
+</button>
