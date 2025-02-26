@@ -1,3 +1,9 @@
+<app-flex></app-flex>
+<app-grid></app-grid>
+<div appResponsive>Ukryj mnie na małych ekranach!</div>
 
+<div *ngIf="isSmallScreen">Mały ekran!</div>
+<div *ngIf="!isSmallScreen">Duży ekran!</div>
 
 <app-nav></app-nav>
+<app-dashboard></app-dashboard>
