@@ -1,0 +1,23 @@
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Automatyczna liczba kolumn */
+    gap: 10px;
+    padding: 20px;
+  }
+  
+  .image {
+    background-color: #ccc;
+    padding: 20px;
+    text-align: center;
+    border-radius: 8px;
+  }
+  
+  @media (max-width: 768px) {
+    .gallery {
+      grid-template-columns: 1fr; /* Na małych ekranach tylko jedna kolumna */
+    }
+  
+    .image {
+      padding: 10px; /* Zmniejszamy padding dla lepszego dopasowania */
+    }
+  }

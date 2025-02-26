@@ -1,0 +1,25 @@
+.navbar {
+    display: flex;
+    justify-content: space-between; /* Rozmieszcza logo i linki na końcach */
+    align-items: center; /* Wyrównuje elementy pionowo */
+    padding: 0 20px;
+    background-color: #333;
+    color: white;
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 20px; /* Odstęp między linkami */
+    list-style: none;
+  }
+  
+  @media (max-width: 768px) {
+    .navbar {
+      flex-direction: column; /* Na małych ekranach zmieniamy kierunek na pionowy */
+      text-align: center;
+    }
+  
+    .nav-links {
+      flex-direction: column; /* Linki są wyświetlane jeden pod drugim */
+    }
+  }

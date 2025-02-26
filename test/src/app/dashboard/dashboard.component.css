@@ -1,0 +1,20 @@
+/* styles.css */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Automatyczna liczba kolumn */
+    gap: 20px; /* Odstęp między elementami */
+    padding: 20px;
+  }
+  
+  .card {
+    background-color: #f0f0f0;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  @media (max-width: 768px) {
+    .dashboard {
+      grid-template-columns: 1fr; /* Na małych ekranach tylko jedna kolumna */
+    }
+  }
