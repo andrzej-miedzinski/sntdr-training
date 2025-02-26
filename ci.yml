@@ -1,0 +1,387 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+  lint:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+
+      - name: Lint affected projects
+        run: npx nx affected --target=lint --parallel=3 --base=main --head=HEAD
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+
+      - name: Run unit tests
+        run: npx nx affected --target=test --parallel=3 --configuration=ci --base=main --head=HEAD
+
+      - name: Run integration tests
+        run: npx nx affected --target=integration-test --parallel=3 --base=main --head=HEAD
+
+      - name: Generate Allure report
+        run: npx allure generate allure-results --clean -o allure-report || true
+
+      - name: Upload Allure report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      buildSucceeded: ${{ env.buildSucceeded }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+
+      - name: Build affected projects
+        run: npx nx affected --target=build --parallel=3 --base=main --head=HEAD --configuration=production || exit 1
+
+      - name: Check if build succeeded
+        id: check-build
+        run: |
+          if [ -d "dist/apps" ] || [ -d "dist/libs" ]; then
+            echo "buildSucceeded=true" >> $GITHUB_ENV
+          else
+            echo "buildSucceeded=false" >> $GITHUB_ENV
+          fi
+
+      - name: List affected apps and libraries
+        if: env.buildSucceeded == 'true'
+        id: list-projects
+        run: |
+          echo "appPaths=$(ls -d dist/apps/* 2>/dev/null)" >> $GITHUB_ENV
+          echo "libPaths=$(ls -d dist/libs/* 2>/dev/null)" >> $GITHUB_ENV
+
+      - name: Archive and upload app artifacts
+        if: env.buildSucceeded == 'true' && contains(github.event_name, 'push')
+        run: |
+          mkdir -p archived-apps
+          for appPath in ${{ env.appPaths }}; do
+            appName=$(basename "$appPath")
+            echo "Archiving app artifacts for: $appName"
+            tar -czf "archived-apps/${appName}.tar.gz" -C "$appPath" .
+          done
+
+      - name: Archive and upload library artifacts
+        if: env.buildSucceeded == 'true' && contains(github.event_name, 'push')
+        run: |
+          mkdir -p archived-libs
+          for libPath in ${{ env.libPaths }}; do
+            libName=$(basename "$libPath")
+            echo "Archiving library artifacts for: $libName"
+            tar -czf "archived-libs/${libName}.tar.gz" -C "$libPath" .
+          done
+
+      - name: Upload all app artifacts
+        if: env.buildSucceeded == 'true' && contains(github.event_name, 'push')
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-app-artifacts
+          path: archived-apps/
+
+      - name: Upload all library artifacts
+        if: env.buildSucceeded == 'true' && contains(github.event_name, 'push')
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-library-artifacts
+          path: archived-libs/
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+
+      - name: Download all app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-app-artifacts
+          path: downloaded-apps
+
+      - name: Download all library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-library-artifacts
+          path: downloaded-libs
+
+      - name: Extract app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/apps
+          for artifact in downloaded-apps/*.tar.gz; do
+            appName=$(basename "$artifact" .tar.gz)
+            echo "Extracting app artifact for: $appName"
+            tar -xzf "$artifact" -C "dist/apps/$appName"
+          done
+
+      - name: Extract library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/libs
+          for artifact in downloaded-libs/*.tar.gz; do
+            libName=$(basename "$artifact" .tar.gz)
+            echo "Extracting library artifact for: $libName"
+            tar -xzf "$artifact" -C "dist/libs/$libName"
+          done
+
+      - name: Run E2E tests for affected projects
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: npx nx affected --target=e2e --parallel=3 --base=main --head=HEAD
+
+      - name: Generate Allure E2E report
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: npx allure generate cypress/allure-results --clean -o allure-e2e-report || true
+
+      - name: Upload Allure E2E report
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-e2e-report
+          path: allure-e2e-report
+
+  release:
+    needs: [build, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'nx.json', 'workspace.json') }}
+
+      - name: Download all app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-app-artifacts
+          path: downloaded-apps
+
+      - name: Download all library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-library-artifacts
+          path: downloaded-libs
+
+      - name: Extract app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/apps
+          for artifact in downloaded-apps/*.tar.gz; do
+            appName=$(basename "$artifact" .tar.gz)
+            echo "Extracting app artifact for: $appName"
+            tar -xzf "$artifact" -C "dist/apps/$appName"
+          done
+
+      - name: Extract library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/libs
+          for artifact in downloaded-libs/*.tar.gz; do
+            libName=$(basename "$artifact" .tar.gz)
+            echo "Extracting library artifact for: $libName"
+            tar -xzf "$artifact" -C "dist/libs/$libName"
+          done
+
+      - name: Release libraries
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: npm run release-libs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download all app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-app-artifacts
+          path: downloaded-apps
+
+      - name: Download all library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: all-library-artifacts
+          path: downloaded-libs
+
+      - name: Extract app artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/apps
+          for artifact in downloaded-apps/*.tar.gz; do
+            appName=$(basename "$artifact" .tar.gz)
+            echo "Extracting app artifact for: $appName"
+            tar -xzf "$artifact" -C "dist/apps/$appName"
+          done
+
+      - name: Extract library artifacts
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          mkdir -p dist/libs
+          for artifact in downloaded-libs/*.tar.gz; do
+            libName=$(basename "$artifact" .tar.gz)
+            echo "Extracting library artifact for: $libName"
+            tar -xzf "$artifact" -C "dist/libs/$libName"
+          done
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy all apps to AWS S3
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          for appPath in dist/apps/*; do
+            appName=$(basename "$appPath")
+            echo "Deploying app: $appName to S3..."
+            aws s3 sync "$appPath/" "s3://your-bucket-name/apps/$appName/"
+          done
+
+      - name: Deploy all libraries to AWS S3
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          for libPath in dist/libs/*; do
+            libName=$(basename "$libPath")
+            echo "Deploying library: $libName to S3..."
+            aws s3 sync "$libPath/" "s3://your-bucket-name/libs/$libName/"
+          done
+
+      - name: Verify deployment
+        if: needs.build.outputs.buildSucceeded == 'true'
+        run: |
+          echo "Verifying app deployments..."
+          for appPath in dist/apps/*; do
+            appName=$(basename "$appPath")
+            aws s3 ls "s3://your-bucket-name/apps/$appName/" --recursive
+          done
+
+          echo "Verifying library deployments..."
+          for libPath in dist/libs/*; do
+            libName=$(basename "$libPath")
+            aws s3 ls "s3://your-bucket-name/libs/$libName/" --recursive
+          done
