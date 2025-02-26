@@ -1,0 +1,47 @@
+Checklista dla recenzenta:  
+
+Czy kod spełnia wymagania biznesowe?  
+Czy zmiany rozwiążą problem, który miały rozwiązać?
+Czy kod jest zgodny z założeniami projektowymi?
+         
+
+Czy kod jest czytelny?  
+Czy nazwy zmiennych, funkcji i klas są opisowe?
+Czy kod jest dobrze sformatowany (zgodność z style guide)?
+Czy kod jest łatwy do zrozumienia przez innych deweloperów?
+        
+
+Czy kod jest testowany?  
+Czy zostały dodane odpowiednie testy jednostkowe/integracyjne?
+Czy testy przechodzą pomyślnie?
+Czy pokrycie kodu testami jest wystarczające?
+         
+
+Czy kod jest optymalny?  
+Czy nie ma zbędnych obliczeń lub nadmiernego zużycia pamięci?
+Czy logika jest prosta i łatwa do zrozumienia?
+Czy kod jest skalowalny?
+        
+
+Czy kod jest bezpieczny?  
+Czy nie ma luk bezpieczeństwa (np. SQL Injection, XSS)?
+Czy dane są odpowiednio walidowane?
+Czy kod jest odporny na ataki (np. CSRF, CORS)?
+         
+
+Czy kod jest zgodny z konwencjami zespołu?  
+Czy użyto odpowiednich wzorców projektowych?
+Czy kod jest zgodny z linterem (np. ESLint, Prettier)?
+Czy kod jest zgodny z wytycznymi zespołu (np. SOLID, DRY)?
+         
+
+Czy dokumentacja została zaktualizowana?  
+Czy README lub inne dokumenty zostały uzupełnione o nowe funkcje?
+Czy komentarze w kodzie są wystarczające i zrozumiałe?
+         
+
+Czy zmiany mają sens w kontekście całego systemu?  
+Czy zmiany nie wpływają negatywnie na inne części systemu?
+Czy kod jest spójny z resztą aplikacji?
+         
+     

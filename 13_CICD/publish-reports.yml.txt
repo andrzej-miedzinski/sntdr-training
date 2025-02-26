@@ -1,0 +1,58 @@
+name: Publish Allure Reports
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+
+jobs:
+  publish-reports:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Download artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: main.yml
+          workflow_conclusion: success
+          path: artifacts
+          
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+          
+      - name: Create merged report directory
+        run: |
+          mkdir -p public
+          cp -r artifacts/allure-report/* public/ || true
+          mkdir -p public/e2e
+          cp -r artifacts/allure-e2e-report/* public/e2e/ || true
+          
+      - name: Create index.html
+        run: |
+          cat > public/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Allure Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              a { display: block; margin: 20px 0; padding: 10px; background: #f0f0f0; text-decoration: none; color: #333; }
+              a:hover { background: #e0e0e0; }
+            </style>
+          </head>
+          <body>
+            <h1>Test Reports</h1>
+            <a href="./index.html">Unit & Integration Tests Report</a>
+            <a href="./e2e/index.html">E2E Tests Report</a>
+          </body>
+          </html>
+          HTML
+          
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+          
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

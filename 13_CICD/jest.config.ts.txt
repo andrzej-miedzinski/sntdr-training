@@ -1,0 +1,11 @@
+import { getJestConfig } from '@nx/jest';
+
+export default {
+  ...getJestConfig(),
+  reporters: [
+    'default',
+    ['jest-allure', {
+      resultsDir: './allure-results'
+    }]
+  ]
+};

@@ -1,0 +1,45 @@
+npx create-nx-workspace@latest santander-monorepo
+npx nx serve santander-monorepo
+npx nx list @nx/angular
+npx nx g @nx/angular:app apps/inventory --dry-run
+npx nx g @nx/angular:library libs/products --standalone
+npx nx g @nx/angular:library libs/orders --standalone
+npx nx g @nx/angular:library libs/shared/ui --standalone
+npx nx graph
+npx nx test santander-monorepo
+npx nx lint inventory 
+npx nx e2e santander-monorepo-e2e
+npx nx show project santander-monorepo-e2e --web
+npx nx run-many -t test lint e2e
+npx nx affected -t test
+npx nx graph --affected
+npx nx run-many -t build
+npx nx affected -t deploy
+npx nx run-many -t lint
+
+npm install --save-dev eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-config-prettier eslint-plugin-prettier prettier @nx/eslint-plugin
+
+npm install --save-dev semantic-release @semantic-release/git @semantic-release/changelog @semantic-release/npm
+
+npm pkg set scripts.release-libs="node tools/scripts/release-libs.js"
+npm pkg set scripts.dep-graph="nx dep-graph"
+npm pkg set scripts.affected="nx affected:dep-graph"
+npm pkg set scripts.affected-build="nx affected:build"
+npm pkg set scripts.affected-test="nx affected:test"
+npm pkg set scripts.affected-lint="nx affected:lint"
+npm pkg set scripts.affected-e2e="nx affected:e2e"
+npm pkg set scripts.build-all="nx run-many --target=build --all"
+npm pkg set scripts.test-all="nx run-many --target=test --all"
+npm pkg set scripts.lint-all="nx run-many --target=lint --all"
+npm pkg set scripts.e2e-all="nx run-many --target=e2e --all --skip-nx-cache"
+npm pkg set scripts.integration-test-all="nx run-many --target=integration-test --all"
+npm pkg set scripts.start-all="nx run-many --target=serve --all --parallel"
+npm pkg set scripts.start-santander-monorepo="nx serve santander-monorepo"
+npm pkg set scripts.start-inventory="nx serve inventory"
+
+npm install --save-dev jest-allure allure-commandline @nx/workspace
+
+
+npm install --save-dev @angular-architects/module-federation@18.0.0
+nx g @angular-architects/module-federation:init --project santander-monorepo --port 4201 --type host
+nx g @angular-architects/module-federation:init --project inventory --port 4202 --type remote
